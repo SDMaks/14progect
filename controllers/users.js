@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const userSchema = require('../models/user');
 
+const { NODE_ENV, JWT_SECRET } = process.env;
+
 const InBaseNotFound = require('../errors/InBaseNotFound');
 
 module.exports.findUser = (req, res) => {
@@ -76,7 +78,7 @@ module.exports.login = (req, res) => {
   return userSchema.findUserByCredentials(email, password)
     .then((user) => {
       // аутентификация успешна! пользователь в переменной user
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
       res
         .cookie('jwt', token, {
           maxAge: 3600000 * 24 * 7,
