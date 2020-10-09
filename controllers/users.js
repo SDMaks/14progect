@@ -65,7 +65,15 @@ module.exports.createUser = (req, res) => {
 
     }))
     .then((user) => res.status(201).send({ _id: user._id, email: user.email }))
-    .catch(() => res.status(400).send({ message: 'Не правильно введены данные' }));
+    .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        return res
+          .status(409)
+          .send({
+            message: 'Пользователь с таким Email уже зарегестрирован!',
+          });
+      }
+    });
 };
 
 module.exports.login = (req, res) => {
@@ -85,7 +93,7 @@ module.exports.login = (req, res) => {
           httpOnly: true,
           sameSite: true,
         })
-        .end();
+        .send({ message: 'Вы авторизованы' });
     })
     .catch((err) => {
       // ошибка аутентификации
