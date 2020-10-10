@@ -67,11 +67,13 @@ module.exports.createUser = (req, res) => {
     .then((user) => res.status(201).send({ _id: user._id, email: user.email }))
     .catch((err) => {
       if (err.name === 'MongoError' && err.code === 11000) {
-        return res
+        res
           .status(409)
           .send({
             message: 'Пользователь с таким Email уже зарегестрирован!',
           });
+      } else {
+        res.status(400).send({ message: err.message });
       }
     });
 };
