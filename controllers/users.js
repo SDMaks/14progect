@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const userSchema = require('../models/user');
 
+const { NODE_ENV, JWT_SECRET } = process.env;
+
 const InBaseNotFound = require('../errors/InBaseNotFound');
 
 module.exports.findUser = (req, res) => {
@@ -63,7 +65,17 @@ module.exports.createUser = (req, res) => {
 
     }))
     .then((user) => res.status(201).send({ _id: user._id, email: user.email }))
-    .catch(() => res.status(400).send({ message: 'Не правильно введены данные' }));
+    .catch((err) => {
+      if (err.name === 'MongoError' && err.code === 11000) {
+        res
+          .status(409)
+          .send({
+            message: 'Пользователь с таким Email уже зарегестрирован!',
+          });
+      } else {
+        res.status(400).send({ message: err.message });
+      }
+    });
 };
 
 module.exports.login = (req, res) => {
@@ -76,14 +88,14 @@ module.exports.login = (req, res) => {
   return userSchema.findUserByCredentials(email, password)
     .then((user) => {
       // аутентификация успешна! пользователь в переменной user
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
       res
         .cookie('jwt', token, {
           maxAge: 3600000 * 24 * 7,
           httpOnly: true,
           sameSite: true,
         })
-        .end();
+        .send({ message: 'Вы авторизованы' });
     })
     .catch((err) => {
       // ошибка аутентификации
